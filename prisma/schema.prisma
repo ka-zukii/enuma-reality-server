@@ -1,0 +1,119 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+enum MemberRole {
+    OWNER
+    ADMIN
+    MEMBER
+    GUEST
+}
+
+model Profile {
+    id           String   @id @db.Uuid
+    email        String   @unique
+    fullName     String   @map("full_name")
+    avatarUrl    String?  @map("avatar_url")
+    avatarConfig Json?    @default("{\"color\": \"#00e5ff\", \"style\": \"default\"}") @map("avatar_config")
+    createdAt    DateTime @default(now()) @map("created_at")
+    updatedAt    DateTime @updatedAt @map("updated_at")
+
+    ownedWorkspaces        Workspace[]       @relation("WorkspaceOwner")
+    memberships            WorkspaceMember[]
+    messages               Message[]
+    sentDirectMessages     DirectMessage[]   @relation("SentDMs")
+    receivedDirectMessages DirectMessage[]   @relation("ReceivedDMs")
+
+    @@map("profiles")
+}
+
+model Workspace {
+    id         String   @id @default(uuid()) @db.Uuid
+    name       String
+    slug       String   @unique
+    ownerId    String?  @map("owner_id") @db.Uuid
+    isAuto     Boolean  @default(false) @map("is_auto")
+    inviteCode String   @unique @default(cuid()) @map("invite_code")
+    createdAt  DateTime @default(now()) @map("created_at")
+    updatedAt  DateTime @updatedAt @map("updated_at")
+
+    owner          Profile?          @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+    members        WorkspaceMember[]
+    rooms          Room[]
+    messages       Message[]
+    directMessages DirectMessage[]
+
+    @@map("workspaces")
+}
+
+model WorkspaceMember {
+    id          String     @id @default(uuid()) @db.Uuid
+    workspaceId String     @map("workspace_id") @db.Uuid
+    profileId   String     @map("profile_id") @db.Uuid
+    role        MemberRole @default(MEMBER)
+    jobTitle    String?    @map("job_title")
+    joinedAt    DateTime   @default(now()) @map("joined_at")
+
+    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+    @@unique([workspaceId, profileId])
+    @@map("workspace_members")
+}
+
+model Room {
+    id          String   @id @default(uuid()) @db.Uuid
+    workspaceId String   @map("workspace_id") @db.Uuid
+    buildingKey String?  @map("building_key")
+    name        String   @default("Main Floor")
+    mapTemplate String   @default("modern-office-1") @map("map_template")
+    layoutJson  Json     @default("{\"zones\": [], \"objects\": []}") @map("layout_json")
+    maxCapacity Int      @default(50) @map("max_capacity")
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    messages  Message[]
+
+    @@unique([workspaceId, buildingKey])
+    @@map("rooms")
+}
+
+model Message {
+    id          String   @id @default(uuid()) @db.Uuid
+    workspaceId String   @map("workspace_id") @db.Uuid
+    roomId      String?  @map("room_id") @db.Uuid
+    senderId    String   @map("sender_id") @db.Uuid
+    content     String
+    createdAt   DateTime @default(now()) @map("created_at")
+
+    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    room      Room?     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+    sender    Profile   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+    @@index([workspaceId, createdAt])
+    @@map("messages")
+}
+
+model DirectMessage {
+    id          String   @id @default(uuid()) @db.Uuid
+    workspaceId String   @map("workspace_id") @db.Uuid
+    senderId    String   @map("sender_id") @db.Uuid
+    receiverId  String   @map("receiver_id") @db.Uuid
+    content     String
+    isRead      Boolean  @default(false) @map("is_read")
+    createdAt   DateTime @default(now()) @map("created_at")
+
+    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    sender    Profile   @relation("SentDMs", fields: [senderId], references: [id], onDelete: Cascade)
+    receiver  Profile   @relation("ReceivedDMs", fields: [receiverId], references: [id], onDelete: Cascade)
+
+    @@index([workspaceId, senderId, receiverId, createdAt])
+    @@map("direct_messages")
+}
