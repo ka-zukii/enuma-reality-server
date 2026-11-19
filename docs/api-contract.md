@@ -368,11 +368,12 @@ Perbaikan di backend yang disarankan (opsional): tambahkan `senderName` dan `rec
 
 #### F. Menghubungkan akun (upgrade tamu)
 
-1. Gunakan `supabase.auth.updateUser({ email, password })`, atau `linkIdentity({ provider: "google" })`.
-2. Jika Supabase mengirim email verifikasi, beri tahu pemain dan tunggu verifikasi.
-3. Setelah berhasil, perbarui sesi, `is_anonymous` akan berubah dan tombol buat server aktif.
-4. Panggil `GET /api/workspaces` untuk memastikan data masih sama.
-5. Socket tidak perlu diganti total. Jika token berubah, connect ulang agar token baru dipakai.
+1. Frontend memanggil `supabase.auth.updateUser({ email, password })` untuk email, atau `linkIdentity({ provider: "google" })` untuk Google. Jika `signup()` dipakai, kirim captcha token bila CAPTCHA sudah aktif.
+2. Karena konfirmasi email nonaktif, sesi langsung diperbarui dan `is_anonymous` menjadi `false`. Jika Secure email change aktif, tampilkan pesan agar pemain mengecek email untuk konfirmasi perubahan, lalu cek ulang `is_anonymous` setelah konfirmasi.
+3. Tombol “Buat server” aktif setelah `is_anonymous` berubah. Panggil `GET /api/workspaces` untuk memastikan data masih sama.
+4. Socket tidak perlu diganti. Jika token berubah, connect ulang agar token baru dipakai.
+5. User ID tidak berubah saat upgrade, jadi profil, keanggotaan, dan riwayat chat tetap terbawa.
+6. Jika email sudah dipakai akun lain, Supabase menolak penautan. Tampilkan pesan dan biarkan pemain tetap sebagai tamu atau login ke akun tersebut. Data tamu tidak ikut pindah.
 
 Catatan: user ID tidak berubah saat upgrade, jadi profil, keanggotaan, dan riwayat chat tetap terbawa.
 
