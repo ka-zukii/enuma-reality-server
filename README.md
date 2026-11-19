@@ -113,6 +113,19 @@ Tamu diidentifikasi dengan `is_anonymous = true`. Saat ini hanya satu aturan yan
 
 Saat tamu menghubungkan email atau Google, user ID tetap sama, sehingga profil, keanggotaan, dan riwayat chat ikut terbawa.
 
+### Konfirmasi email
+
+Konfirmasi email di Supabase **dinonaktifkan** untuk menghindari rate limit saat pendaftaran. Akibatnya:
+
+- Pendaftaran dengan email langsung aktif tanpa verifikasi.
+- Email belum terbukti dimiliki pendaftar. Siapa pun bisa mendaftar memakai email orang lain.
+- Jika pengaturan **Secure email change** aktif, perubahan email tetap memerlukan konfirmasi dari email lama dan baru.
+
+Rekomendasi:
+
+- Pasang custom SMTP (misalnya Resend atau Brevo) di Authentication → Emails → SMTP Settings, untuk email reset password dan magic link.
+- Aktifkan CAPTCHA (Cloudflare Turnstile atau hCaptcha) di Authentication → Attack Protection, supaya sign-in anonim dan pendaftaran tidak bisa dibuat massal. Frontend perlu mengirim captcha token saat `signInAnonymously()` dan `signUp()`.
+
 ## Ringkasan API
 
 Dokumentasi lengkap (request, response, dan error) ada di API contract. Ringkasannya:

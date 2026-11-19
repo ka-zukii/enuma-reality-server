@@ -23,12 +23,20 @@ function readAvatar(raw: Prisma.JsonValue | null): AvatarConfig {
       color: typeof obj.color === "string" ? obj.color : DEFAULT_AVATAR.color,
       style: typeof obj.style === "string" ? obj.style : DEFAULT_AVATAR.style,
       character:
-        typeof obj.character === "string"
-          ? obj.character
-          : DEFAULT_CHARACTER,
+        typeof obj.character === "string" ? obj.character : DEFAULT_CHARACTER,
     };
   }
   return { ...DEFAULT_AVATAR };
+}
+
+/**
+ * Email untuk profil. Tamu anonim kadang punya email kosong ("") atau null,
+ * dan keduanya harus memakai placeholder yang unik per user.
+ */
+function resolveEmail(user: User, fallback?: string): string {
+  const email = user.email?.trim();
+  if (email) return email;
+  return fallback ?? `guest-${user.id}@anon.local`;
 }
 
 function isUniqueViolation(err: unknown): boolean {
@@ -60,7 +68,7 @@ export async function ensureProfile(user: User) {
         data: {
           id: user.id,
           // Tamu anonim tidak punya email; pakai placeholder yang unik per user
-          email: user.email ?? `guest-${user.id}@anon.local`,
+          email: resolveEmail(user),
           fullName: metaName ?? `Tamu-${user.id.slice(0, 6)}`,
           avatarConfig: avatar,
         },
@@ -80,7 +88,7 @@ export async function ensureProfile(user: User) {
     : currentAvatar;
 
   const nextName = metaName ?? existing.fullName;
-  const nextEmail = user.email ?? existing.email;
+  const nextEmail = resolveEmail(user, existing.email);
 
   const changed =
     nextName !== existing.fullName ||
