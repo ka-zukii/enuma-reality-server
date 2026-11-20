@@ -2,12 +2,9 @@ import type { Profile } from "@prisma/client";
 import type { Server, Socket } from "socket.io";
 import { verifyAccessToken } from "../lib/auth.js";
 import { ensureProfile } from "../services/profile.js";
-import { scheduleWorkspaceCleanup } from "../services/workspaceCleanup.js";
-import {
-  activePlayers,
-  countOnlinePlayersInWorkspace,
-  roomChannel,
-} from "../state/presence.js";
+import { startInactivitySweep } from "../services/inactivity.js";
+import { startDisconnectGrace } from "../services/playerLifecycle.js";
+import { activePlayers } from "../state/presence.js";
 import { registerChat } from "./handlers/chat.js";
 import { registerPlayerState } from "./handlers/player.js";
 import { registerRoomJoin } from "./handlers/roomJoin.js";
@@ -43,23 +40,16 @@ export function setupSocketIO(io: Server): void {
   });
 
   startGameLoop(io);
+  startInactivitySweep(io);
 }
 
+/**
+ * Socket putus: avatar tidak langsung dihapus, melainkan masuk grace period.
+ * Jika pemain join ulang dalam batas waktu, sesinya digantikan dan posisinya dibawa.
+ */
 function handleDisconnect(io: Server, socket: Socket, reason: string): void {
-  const player = activePlayers.get(socket.id);
-
-  if (player) {
-    activePlayers.delete(socket.id);
-
-    io.to(roomChannel(player.roomId)).emit("player:left", {
-      socketId: socket.id,
-      userId: player.userId,
-    });
-
-    // Tidak ada pemain tersisa di server ini → jadwalkan penghapusan otomatis
-    if (countOnlinePlayersInWorkspace(player.workspaceId) === 0) {
-      scheduleWorkspaceCleanup(player.workspaceId);
-    }
+  if (activePlayers.has(socket.id)) {
+    startDisconnectGrace(io, socket.id);
   }
 
   console.log(

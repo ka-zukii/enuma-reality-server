@@ -4,6 +4,7 @@ import { prisma } from "../../config/clients.js";
 import { ZONE } from "../../config/layouts.js";
 import { canJoin, releaseSeat } from "../../services/serverAllocator.js";
 import { cancelWorkspaceCleanup } from "../../services/workspaceCleanup.js";
+import { cancelDisconnectGrace } from "../../services/playerLifecycle.js";
 import {
   activePlayers,
   PlayerState,
@@ -25,7 +26,7 @@ export interface RoomJoinPayload {
   rotationY?: number;
 }
 
-/** State pemain yang dibawa dari sesi sebelumnya (reconnect / pindah room) */
+/** State pemain yang dibawa dari sesi sebelumnya (reconnect / pindah room / kembali dari idle) */
 interface CarriedState {
   position: Position;
   rotationY: number;
@@ -78,7 +79,7 @@ export function registerRoomJoin(io: Server, socket: Socket): void {
     releaseSeat(workspaceId, profile.id);
     cancelWorkspaceCleanup(workspaceId);
 
-    // 1d. Ambil state lama pemain & beri tahu room lama bahwa ia sudah pindah
+    // 1d. Ambil state lama pemain (termasuk sesi yang sedang reconnecting)
     const carried = takeOverPreviousSessions(
       io,
       profile.id,
@@ -106,6 +107,8 @@ export function registerRoomJoin(io: Server, socket: Socket): void {
       role: membership.role,
       jobTitle: membership.jobTitle,
       status: carried.status,
+      lastActiveAt: Date.now(),
+      connectionState: "connected",
     };
     activePlayers.set(socket.id, newPlayer);
 
@@ -119,8 +122,9 @@ export function registerRoomJoin(io: Server, socket: Socket): void {
 }
 
 /**
- * Hapus sesi lama milik user yang sama. Jika room-nya sama, state dibawa;
- * jika berbeda, room lama diberi tahu `player:left`.
+ * Hapus sesi lama milik user yang sama (termasuk yang sedang reconnecting).
+ * State posisi dibawa jika room-nya sama. `player:left` selalu dikirim untuk socket lama,
+ * karena client menyimpan avatar berdasarkan socketId.
  */
 function takeOverPreviousSessions(
   io: Server,
@@ -148,14 +152,15 @@ function takeOverPreviousSessions(
       carried.animation = p.animation;
       carried.zone = p.zone;
       carried.status = p.status;
-    } else {
-      io.to(roomChannel(p.roomId)).emit("player:left", {
-        socketId,
-        userId,
-      });
     }
 
+    cancelDisconnectGrace(socketId);
     activePlayers.delete(socketId);
+
+    io.to(roomChannel(p.roomId)).emit("player:left", {
+      socketId,
+      userId,
+    });
   }
 
   return carried;

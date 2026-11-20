@@ -5,7 +5,9 @@ import cors from "@fastify/cors";
 import { Server } from "socket.io";
 import { setupSocketIO } from "./sockets/index.js";
 import { workspaceRoutes } from "./routes/workspace.js";
+import { weatherRoutes } from "./routes/weather.js";
 import { startWorkspaceCleanupCron } from "./services/workspaceCleanup.js";
+import { startWeatherRefresh } from "./services/weather.js";
 
 const fastify = Fastify({ logger: true });
 
@@ -20,6 +22,7 @@ async function bootstrap() {
 
   // REST API dengan prefix /api
   await fastify.register(workspaceRoutes, { prefix: "/api" });
+  await fastify.register(weatherRoutes, { prefix: "/api" });
 
   const io = new Server(fastify.server, {
     cors: {
@@ -33,6 +36,7 @@ async function bootstrap() {
 
   setupSocketIO(io);
   startWorkspaceCleanupCron();
+  startWeatherRefresh();
 
   const port = Number(process.env.PORT) || 4000;
   await fastify.listen({ port, host: "0.0.0.0" });

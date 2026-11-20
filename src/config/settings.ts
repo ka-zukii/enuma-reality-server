@@ -13,3 +13,15 @@ export const RESERVATION_TTL_MS = 15_000;
 
 // Chat proximity
 export const PROXIMITY_CHAT_RADIUS = 6.0; // meter
+
+// Deteksi pemain tidak aktif
+// Pemain yang tidak mengirim aktivitas selama ini akan dikeluarkan dari server
+export const INACTIVITY_TIMEOUT_MS =
+  (Number(process.env.PLAYER_INACTIVITY_SECONDS) || 180) * 1000;
+
+// Seberapa sering server memeriksa pemain tidak aktif
+export const INACTIVITY_SWEEP_MS = 15_000;
+
+// Grace period saat koneksi putus: avatar ditahan selama ini sebelum dihapus
+export const DISCONNECT_GRACE_MS =
+  (Number(process.env.DISCONNECT_GRACE_SECONDS) || 15) * 1000;

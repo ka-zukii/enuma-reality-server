@@ -23,6 +23,7 @@ export function startGameLoop(io: Server): void {
           rotationY: p.rotationY,
           animation: p.animation,
           zone: p.zone,
+          connectionState: p.connectionState,
         })),
       );
     }

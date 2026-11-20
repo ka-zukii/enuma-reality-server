@@ -11,6 +11,9 @@ export type PlayerStatus = (typeof PLAYER_STATUSES)[number];
 
 export type Position = [number, number, number];
 
+/** "connected": socket aktif. "reconnecting": socket putus, avatar ditahan selama grace period. */
+export type ConnectionState = "connected" | "reconnecting";
+
 export interface PlayerState {
   socketId: string;
   userId: string;
@@ -28,6 +31,9 @@ export interface PlayerState {
   role: MemberRole;
   jobTitle: string | null;
   status: PlayerStatus;
+  /** Timestamp (ms) aktivitas terakhir pemain. Dipakai untuk deteksi pemain tidak aktif. */
+  lastActiveAt: number;
+  connectionState: ConnectionState;
 }
 
 /** Key: socket.id -> Value: PlayerState. Sumber kebenaran pemain online (in-memory). */
@@ -50,5 +56,6 @@ export function getDistanceXZ(a: Position, b: Position): number {
 
 // Nama channel Socket.IO, dipusatkan agar tidak ada string yang ditulis manual
 export const roomChannel = (roomId: string) => `room:${roomId}`;
-export const workspaceChannel = (workspaceId: string) => `workspace:${workspaceId}`;
+export const workspaceChannel = (workspaceId: string) =>
+  `workspace:${workspaceId}`;
 export const userChannel = (userId: string) => `user:${userId}`;

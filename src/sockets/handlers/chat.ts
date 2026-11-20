@@ -27,6 +27,9 @@ export function registerChat(io: Server, socket: Socket): void {
     const content = payload?.content?.trim();
     if (!sender || !content) return;
 
+    // Chat juga dihitung sebagai aktivitas
+    sender.lastActiveAt = Date.now();
+
     switch (payload?.channel) {
       case "PROXIMITY":
         return sendProximity(io, sender, content);
@@ -54,6 +57,8 @@ function sendProximity(io: Server, sender: PlayerState, content: string) {
 
   for (const target of activePlayers.values()) {
     if (target.roomId !== sender.roomId) continue;
+    // Pemain yang sedang reconnecting tidak punya socket aktif untuk menerima pesan
+    if (target.connectionState !== "connected") continue;
     if (canHearProximity(sender, target)) {
       io.to(target.socketId).emit("chat:receive", packet);
     }
