@@ -14,6 +14,12 @@ export type Position = [number, number, number];
 /** "connected": socket aktif. "reconnecting": socket putus, avatar ditahan selama grace period. */
 export type ConnectionState = "connected" | "reconnecting";
 
+/** Posisi penumpang di dalam kabin trem (lokal, origin = pusat kepala trem). */
+export interface RideState {
+  rx: number;
+  rz: number;
+}
+
 export interface PlayerState {
   socketId: string;
   userId: string;
@@ -26,6 +32,8 @@ export interface PlayerState {
   rotationY: number;
   animation: "idle" | "walk";
   zone: string;
+  /** null jika berjalan di luar trem */
+  ride?: RideState | null;
   isMicOn: boolean;
   isCamOn: boolean;
   role: MemberRole;

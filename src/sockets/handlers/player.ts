@@ -4,6 +4,7 @@ import {
   PLAYER_STATUSES,
   PlayerStatus,
   Position,
+  RideState,
   roomChannel,
 } from "../../state/presence.js";
 import { onEvent } from "../guard.js";
@@ -13,6 +14,21 @@ interface MovePayload {
   rotationY: number;
   animation: "idle" | "walk";
   zone?: string;
+  ride?: { rx: number; rz: number } | null;
+}
+
+// Batas kabin trem (lihat TRAM di client). Mencegah posisi penumpang di luar kabin.
+const RIDE_RX_LIMIT = 1.3;
+const RIDE_RZ_MIN = -16;
+const RIDE_RZ_MAX = 6;
+
+function sanitizeRide(raw: MovePayload["ride"]): RideState | null {
+  if (!raw || typeof raw !== "object") return null;
+  if (!Number.isFinite(raw.rx) || !Number.isFinite(raw.rz)) return null;
+  return {
+    rx: Math.max(-RIDE_RX_LIMIT, Math.min(RIDE_RX_LIMIT, raw.rx)),
+    rz: Math.max(RIDE_RZ_MIN, Math.min(RIDE_RZ_MAX, raw.rz)),
+  };
 }
 
 export function registerPlayerState(io: Server, socket: Socket): void {
@@ -25,6 +41,7 @@ export function registerPlayerState(io: Server, socket: Socket): void {
     player.rotationY = payload.rotationY;
     player.animation = payload.animation;
     if (payload.zone) player.zone = payload.zone;
+    player.ride = sanitizeRide(payload.ride);
     player.lastActiveAt = Date.now();
   });
 
