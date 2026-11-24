@@ -38,7 +38,7 @@ async function bootstrap() {
   startWorkspaceCleanupCron();
   startWeatherRefresh();
 
-  const port = Number(process.env.PORT) || 4000;
+  const port = Number(process.env.SERVER_PORT || process.env.PORT) || 4000;
   await fastify.listen({ port, host: "0.0.0.0" });
   console.log(
     `🚀 Enuma Reality Project Server running on http://localhost:${port}`,

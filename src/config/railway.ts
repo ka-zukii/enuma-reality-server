@@ -4,8 +4,8 @@
 // RAIL atau bentuk jalur, ubah keduanya.
 
 export const RAIL = {
-  halfX: 39.5,
-  halfZ: 39.5,
+  halfX: 52,
+  halfZ: 50,
   cornerRadius: 18,
   arcSegments: 24,
 } as const;
@@ -65,7 +65,7 @@ const CENTER_PATH = buildRoundedPath(RAIL.halfX, RAIL.halfZ, RAIL.cornerRadius);
 export const LOOP_LENGTH = CENTER_PATH.length;
 
 /** Stasiun. dwell = lama trem berhenti (detik). */
-const STATIONS = [{ x: 0, z: 36, dwell: 10 }];
+const STATIONS = [{ x: 0, z: 50, dwell: 10 }];
 
 /** Jarak sepanjang jalur pusat untuk titik terdekat dari (x, z). */
 function nearestArcLength(x: number, z: number): number {
@@ -80,7 +80,10 @@ function nearestArcLength(x: number, z: number): number {
     const dz = b.z - a.z;
     const len2 = dx * dx + dz * dz || 1;
 
-    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / len2));
+    const t = Math.max(
+      0,
+      Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / len2),
+    );
     const px = a.x + dx * t;
     const pz = a.z + dz * t;
     const d = Math.hypot(x - px, z - pz);
