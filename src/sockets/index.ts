@@ -1,6 +1,6 @@
 import type { Profile } from "@prisma/client";
 import type { Server, Socket } from "socket.io";
-import { verifyAccessToken } from "../lib/auth.js";
+import { isGuest, verifyAccessToken } from "../lib/auth.js";
 import { ensureProfile } from "../services/profile.js";
 import { startInactivitySweep } from "../services/inactivity.js";
 import { startDisconnectGrace } from "../services/playerLifecycle.js";
@@ -21,6 +21,7 @@ export function setupSocketIO(io: Server): void {
       if (!user) return next(new Error("Unauthorized: Invalid token"));
 
       socket.data.profile = await ensureProfile(user);
+      socket.data.isGuest = isGuest(user);
       next();
     } catch (err) {
       console.error("[Socket Auth] Error:", err);

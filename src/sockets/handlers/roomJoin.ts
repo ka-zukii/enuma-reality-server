@@ -2,6 +2,7 @@ import type { Profile } from "@prisma/client";
 import type { Server, Socket } from "socket.io";
 import { prisma } from "../../config/clients.js";
 import { ZONE } from "../../config/layouts.js";
+import { ensureMembership } from "../../services/membership.js";
 import { canJoin, releaseSeat } from "../../services/serverAllocator.js";
 import { cancelWorkspaceCleanup } from "../../services/workspaceCleanup.js";
 import { cancelDisconnectGrace } from "../../services/playerLifecycle.js";
@@ -55,11 +56,11 @@ export function registerRoomJoin(io: Server, socket: Socket): void {
     }
 
     // 1b. Pastikan user terdaftar sebagai member, ambil role dan jabatannya
-    const membership = await prisma.workspaceMember.upsert({
-      where: { workspaceId_profileId: { workspaceId, profileId: profile.id } },
-      update: {},
-      create: { workspaceId, profileId: profile.id, role: "MEMBER" },
-    });
+    const membership = await ensureMembership(
+      workspaceId,
+      profile.id,
+      socket.data.isGuest === true,
+    );
 
     const joinedChannels = [
       roomChannel(roomId),

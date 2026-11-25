@@ -4,6 +4,7 @@ import { prisma } from "../config/clients.js";
 import { interiorRoomLayout } from "../config/layouts.js";
 import { HARD_CAP } from "../config/settings.js";
 import { isGuest, verifyAccessToken } from "../lib/auth.js";
+import { ensureMembership } from "../services/membership.js";
 import { ensureProfile } from "../services/profile.js";
 import {
   canJoin,
@@ -184,13 +185,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
           .send({ error: `Server sudah penuh (maks ${HARD_CAP} pemain)` });
       }
 
-      await prisma.workspaceMember.upsert({
-        where: {
-          workspaceId_profileId: { workspaceId: workspace.id, profileId: userId },
-        },
-        update: {},
-        create: { workspaceId: workspace.id, profileId: userId, role: "MEMBER" },
-      });
+      await ensureMembership(workspace.id, userId, request.isGuest);
 
       return workspace;
     },
