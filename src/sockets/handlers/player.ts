@@ -1,4 +1,7 @@
+import type { Profile } from "@prisma/client";
 import type { Server, Socket } from "socket.io";
+import { prisma } from "../../config/clients.js";
+import { ALLOWED_AVATAR_IDS } from "../../config/avatars.js";
 import {
   activePlayers,
   PLAYER_STATUSES,
@@ -66,6 +69,44 @@ export function registerPlayerState(io: Server, socket: Socket): void {
       socketId: socket.id,
       userId: player.userId,
       status: player.status,
+    });
+  });
+
+  // 2c. Ganti avatar: siarkan ke pemain lain di room, lalu simpan ke database
+  onEvent<{ avatarId?: unknown }>(socket, "player:avatar", async (payload) => {
+    const avatarId = payload?.avatarId;
+    if (typeof avatarId !== "string" || !ALLOWED_AVATAR_IDS.has(avatarId)) {
+      console.log("[avatar] ditolak", payload);
+      return;
+    }
+
+    const player = activePlayers.get(socket.id);
+    if (!player) {
+      console.log("[avatar] tidak ada player aktif untuk", socket.id);
+      return;
+    }
+
+    player.avatarConfig = { ...player.avatarConfig, character: avatarId };
+    player.lastActiveAt = Date.now();
+
+    const room = roomChannel(player.roomId);
+    const receivers = await io.in(room).fetchSockets();
+    console.log(
+      `[avatar] ${player.fullName} -> ${avatarId} | room=${player.roomId} | penerima=${receivers.length}`,
+    );
+
+    io.to(room).emit("player:avatar", {
+      socketId: socket.id,
+      userId: player.userId,
+      avatarConfig: player.avatarConfig,
+    });
+
+    // Simpan ke profil supaya join ulang berikutnya memakai avatar yang sama
+    const profile = socket.data.profile as Profile;
+    const current = (profile.avatarConfig ?? {}) as Record<string, unknown>;
+    socket.data.profile = await prisma.profile.update({
+      where: { id: profile.id },
+      data: { avatarConfig: { ...current, character: avatarId } },
     });
   });
 }
