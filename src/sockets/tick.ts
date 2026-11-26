@@ -1,6 +1,7 @@
 import type { Server } from "socket.io";
 import { activePlayers, PlayerState, roomChannel } from "../state/presence.js";
 import { advanceTram, getTram, pruneTrams, snapshotTram } from "../services/tram.js";
+import { getNpcWorld, isExteriorRoom, pruneNpcWorlds } from "../npc/world.js";
 
 const TICK_MS = 50; // 20 Hz
 
@@ -45,9 +46,26 @@ export function startGameLoop(io: Server): void {
         tram: snapshotTram(tram),
         serverTime: now,
       });
+
+      // NPC kota: disimulasikan di server, sama untuk semua pemain di room
+      if (isExteriorRoom(roomId)) {
+        const world = getNpcWorld(roomId, now);
+        world.step(
+          now,
+          players
+            .filter((p) => p.connectionState === "connected")
+            .map((p) => ({ x: p.position[0], z: p.position[2] })),
+          tram,
+        );
+        if (world.shouldBroadcast()) {
+          io.to(channel).emit("npc:world", world.snapshot(now));
+        }
+      }
     }
 
-    // Trem di room yang sudah kosong dibuang
-    pruneTrams(new Set(byRoom.keys()));
+    // Trem dan NPC di room yang sudah kosong dibuang
+    const activeRooms = new Set(byRoom.keys());
+    pruneTrams(activeRooms);
+    pruneNpcWorlds(activeRooms);
   }, TICK_MS);
 }

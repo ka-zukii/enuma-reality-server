@@ -6,6 +6,7 @@ import { startInactivitySweep } from "../services/inactivity.js";
 import { startDisconnectGrace } from "../services/playerLifecycle.js";
 import { activePlayers } from "../state/presence.js";
 import { registerChat } from "./handlers/chat.js";
+import { registerNpcInteract } from "./handlers/npc.js";
 import { registerPlayerState } from "./handlers/player.js";
 import { registerRoomJoin } from "./handlers/roomJoin.js";
 import { startGameLoop } from "./tick.js";
@@ -36,6 +37,7 @@ export function setupSocketIO(io: Server): void {
     registerRoomJoin(io, socket);
     registerPlayerState(io, socket);
     registerChat(io, socket);
+    registerNpcInteract(io, socket);
 
     socket.on("disconnect", (reason) => handleDisconnect(io, socket, reason));
   });

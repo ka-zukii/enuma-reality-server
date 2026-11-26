@@ -3,11 +3,13 @@ import type { Server, Socket } from "socket.io";
 import { prisma } from "../../config/clients.js";
 import { ZONE } from "../../config/layouts.js";
 import { ensureMembership } from "../../services/membership.js";
+import { markExteriorRoom } from "../../npc/world.js";
 import { canJoin, releaseSeat } from "../../services/serverAllocator.js";
 import { cancelWorkspaceCleanup } from "../../services/workspaceCleanup.js";
 import { cancelDisconnectGrace } from "../../services/playerLifecycle.js";
 import {
   activePlayers,
+  PlayerAnimation,
   PlayerState,
   PlayerStatus,
   Position,
@@ -31,7 +33,7 @@ export interface RoomJoinPayload {
 interface CarriedState {
   position: Position;
   rotationY: number;
-  animation: "idle" | "walk";
+  animation: PlayerAnimation;
   zone: string;
   status: PlayerStatus;
 }
@@ -51,6 +53,7 @@ export function registerRoomJoin(io: Server, socket: Socket): void {
 
     // 1a. Room harus ada dan milik workspace yang sama
     const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (room && !room.buildingKey) markExteriorRoom(roomId);
     if (!room || room.workspaceId !== workspaceId) {
       return fail(socket, "Ruangan tidak valid.");
     }

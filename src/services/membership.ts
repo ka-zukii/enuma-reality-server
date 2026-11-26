@@ -1,40 +1,35 @@
-import type { MemberRole, WorkspaceMember } from "@prisma/client";
+import type { MemberRole } from "@prisma/client";
 import { prisma } from "../config/clients.js";
 
 /**
- * Peran dasar untuk pemain di sebuah server:
- * - Tamu (sesi anonim)      -> GUEST, ditampilkan sebagai "Tamu"
- * - Akun yang sudah login   -> MEMBER, ditampilkan sebagai "Warga"
- */
-export function baseRoleFor(guest: boolean): MemberRole {
-  return guest ? "GUEST" : "MEMBER";
-}
-
-/**
- * Ambil atau buat keanggotaan user di workspace, lalu sinkronkan peran GUEST/MEMBER
- * dengan status login-nya. Peran OWNER dan ADMIN tidak pernah diubah di sini.
+ * Role membership:
+ * - User yang sudah login  -> MEMBER (ditampilkan sebagai "Warga")
+ * - Tamu (sign-in anonim)  -> GUEST  (ditampilkan sebagai "Tamu")
+ *
+ * OWNER dan ADMIN tidak pernah diubah di sini. Tamu yang kemudian login
+ * (hubungkan email/Google) otomatis naik dari GUEST menjadi MEMBER.
  */
 export async function ensureMembership(
   workspaceId: string,
   profileId: string,
   guest: boolean,
-): Promise<WorkspaceMember> {
-  const desired = baseRoleFor(guest);
-  const key = { workspaceId_profileId: { workspaceId, profileId } };
-
+) {
   const membership = await prisma.workspaceMember.upsert({
-    where: key,
+    where: { workspaceId_profileId: { workspaceId, profileId } },
     update: {},
-    create: { workspaceId, profileId, role: desired },
+    create: {
+      workspaceId,
+      profileId,
+      role: guest ? "GUEST" : "MEMBER",
+    },
   });
 
-  const isBaseRole =
-    membership.role === "MEMBER" || membership.role === "GUEST";
-  if (isBaseRole && membership.role !== desired) {
+  if (!guest && membership.role === "GUEST") {
     return prisma.workspaceMember.update({
-      where: key,
-      data: { role: desired },
+      where: { id: membership.id },
+      data: { role: "MEMBER" satisfies MemberRole },
     });
   }
+
   return membership;
 }

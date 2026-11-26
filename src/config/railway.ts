@@ -59,7 +59,7 @@ function buildRoundedPath(
   return { points, cum, length: cum[cum.length - 1] };
 }
 
-const CENTER_PATH = buildRoundedPath(RAIL.halfX, RAIL.halfZ, RAIL.cornerRadius);
+export const CENTER_PATH = buildRoundedPath(RAIL.halfX, RAIL.halfZ, RAIL.cornerRadius);
 
 /** Keliling loop dalam unit (meter). */
 export const LOOP_LENGTH = CENTER_PATH.length;

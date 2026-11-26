@@ -4,7 +4,9 @@ import { prisma } from "../../config/clients.js";
 import { ALLOWED_AVATAR_IDS } from "../../config/avatars.js";
 import {
   activePlayers,
+  isPlayerAnimation,
   PLAYER_STATUSES,
+  PlayerAnimation,
   PlayerStatus,
   Position,
   RideState,
@@ -15,7 +17,7 @@ import { onEvent } from "../guard.js";
 interface MovePayload {
   position: Position;
   rotationY: number;
-  animation: "idle" | "walk";
+  animation: PlayerAnimation;
   zone?: string;
   ride?: { rx: number; rz: number } | null;
 }
@@ -34,16 +36,32 @@ function sanitizeRide(raw: MovePayload["ride"]): RideState | null {
   };
 }
 
+/** Posisi wajib tiga angka berhingga; selain itu paket gerak diabaikan. */
+function isValidPosition(raw: unknown): raw is Position {
+  return (
+    Array.isArray(raw) &&
+    raw.length === 3 &&
+    raw.every((n) => typeof n === "number" && Number.isFinite(n))
+  );
+}
+
 export function registerPlayerState(io: Server, socket: Socket): void {
   // 2. Update koordinat & zona pergerakan avatar
   socket.on("player:move", (payload: MovePayload) => {
     const player = activePlayers.get(socket.id);
-    if (!player || !payload?.position) return;
+    if (!player || !isValidPosition(payload?.position)) return;
 
     player.position = payload.position;
-    player.rotationY = payload.rotationY;
-    player.animation = payload.animation;
-    if (payload.zone) player.zone = payload.zone;
+    player.rotationY = Number.isFinite(payload.rotationY)
+      ? payload.rotationY
+      : player.rotationY;
+    // Animasi di luar daftar (idle, walk, sit) dianggap idle
+    player.animation = isPlayerAnimation(payload.animation)
+      ? payload.animation
+      : "idle";
+    if (typeof payload.zone === "string" && payload.zone.length <= 64) {
+      player.zone = payload.zone;
+    }
     player.ride = sanitizeRide(payload.ride);
     player.lastActiveAt = Date.now();
   });
@@ -55,7 +73,7 @@ export function registerPlayerState(io: Server, socket: Socket): void {
     if (player) player.lastActiveAt = Date.now();
   });
 
-  // 2b. Ubah status presence (LIVE, PAGI, STANDUP, ISTIRAHAT, TAMU)
+  // 2b. Ubah status presence (sama dengan PlayerStatus di web)
   onEvent<{ status?: unknown }>(socket, "player:status", (payload) => {
     const player = activePlayers.get(socket.id);
     if (!player) return;

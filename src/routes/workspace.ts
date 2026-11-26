@@ -231,7 +231,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     }));
   });
 
-  // 4b. GET /api/rooms/:roomId/messages — (deprecated) riwayat per room, kini hanya untuk anggota
+  // 4b. GET /api/rooms/:roomId/messages — riwayat chat GLOBAL workspace pemilik room (anggota saja)
   fastify.get<{ Params: { roomId: string } }>(
     "/rooms/:roomId/messages",
     async (request, reply) => {
@@ -255,8 +255,10 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.status(403).send({ error: "Kamu bukan anggota server ini" });
       }
 
+      // Chat GLOBAL disiarkan ke seluruh workspace (lihat chat.ts), jadi riwayatnya
+      // juga diambil per workspace agar pesan dari gedung tetap tampil di sini.
       const messages = await prisma.message.findMany({
-        where: { roomId },
+        where: { workspaceId: room.workspaceId },
         include: {
           sender: { select: { id: true, fullName: true, avatarUrl: true } },
         },
