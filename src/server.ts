@@ -25,12 +25,13 @@ async function bootstrap() {
   await fastify.register(weatherRoutes, { prefix: "/api" });
 
   const io = new Server(fastify.server, {
+    path: "/realtime",
     cors: {
       origin: true,
       methods: ["GET", "POST"],
       credentials: true,
     },
-    pingTimeout: 60000, // toleransi latensi tinggi hingga 60 detik
+    pingTimeout: 60000,
     pingInterval: 25000,
   });
 
