@@ -35,7 +35,6 @@ class Walker extends Npc {
   private dir: 1 | -1;
   private pauseTimer = 0;
   private nextPauseIn: number;
-  private wasNear = false;
 
   constructor(
     id: string,
@@ -52,17 +51,16 @@ class Walker extends Npc {
   click(now: number): void {
     // Klik selalu pindah ke baris dialog berikutnya dan memperpanjang bubble
     const next = this.talk < 0 ? 0 : (this.talk + 1) % this.spec.lineCount;
-    this.say(next, now, 4000);
+    this.say(next, now, 3000);
   }
 
   update(ctx: StepContext): void {
     const dt = Math.min(ctx.dt, 0.05);
     const p = nearest(ctx.players, this.x, this.spec.startZ);
     const isNear = !!p && p.dist < 2.4;
-    if (isNear && !this.wasNear && !this.isTalking()) this.say(0, ctx.nowMs, 4000);
-    this.wasNear = isNear;
+    this.greetOnApproach(isNear, 0, ctx.nowMs, 3000);
 
-    const talking = isNear || this.isTalking();
+    const talking = this.isTalking();
     if (!talking) {
       this.nextPauseIn -= dt;
       if (this.nextPauseIn <= 0) {
@@ -74,7 +72,11 @@ class Walker extends Npc {
     if (talking || this.pauseTimer > 0) {
       if (!talking) this.pauseTimer -= dt;
       const target =
-        talking && p ? Math.atan2(p.dx, p.dz) : this.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+        talking && p
+          ? Math.atan2(p.dx, p.dz)
+          : this.dir > 0
+            ? Math.PI / 2
+            : -Math.PI / 2;
       this.yaw = turnToward(this.yaw, target, 0.14);
       this.y = Math.sin(ctx.nowSec * 2) * 0.006;
       this.anim = 0;
@@ -97,7 +99,10 @@ class Walker extends Npc {
   }
 }
 
-export function createPedestrians(): { walkers: Npc[]; update: (ctx: StepContext) => void } {
+export function createPedestrians(): {
+  walkers: Npc[];
+  update: (ctx: StepContext) => void;
+} {
   const walkers = WALKERS.map((s, i) => new Walker(`walker-${i}`, s));
   return {
     walkers,

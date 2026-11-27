@@ -12,16 +12,26 @@ interface ChatterSpec {
 }
 
 const CHATTERS: ChatterSpec[] = [
-  { id: "rina", pos: [34.72, 12.2], rotY: Math.PI / 2, sitting: true, lineCount: 2 },
-  { id: "budi", pos: [36.28, 12.2], rotY: -Math.PI / 2, sitting: true, lineCount: 2 },
+  {
+    id: "rina",
+    pos: [34.72, 12.2],
+    rotY: Math.PI / 2,
+    sitting: true,
+    lineCount: 2,
+  },
+  {
+    id: "budi",
+    pos: [36.28, 12.2],
+    rotY: -Math.PI / 2,
+    sitting: true,
+    lineCount: 2,
+  },
   { id: "siti", pos: [-16, 28.5], rotY: 0, sitting: true, lineCount: 2 },
   { id: "dito", pos: [14, 13.4], rotY: Math.PI, sitting: true, lineCount: 2 },
   { id: "andi", pos: [-22.6, 17.1], rotY: 0, sitting: false, lineCount: 2 },
 ];
 
 class Chatter extends Npc {
-  private wasNear = false;
-
   constructor(private readonly spec: ChatterSpec) {
     super(spec.id);
     this.x = spec.pos[0];
@@ -32,23 +42,26 @@ class Chatter extends Npc {
 
   click(now: number): void {
     const next = this.talk < 0 ? 0 : (this.talk + 1) % this.spec.lineCount;
-    this.say(next, now, 4500);
+    this.say(next, now, 3000);
   }
 
   update(ctx: StepContext): void {
     const p = nearest(ctx.players, this.x, this.z);
     const isNear = !!p && p.dist < 2.8;
-    if (isNear && !this.wasNear && !this.isTalking()) this.say(0, ctx.nowMs, 4500);
-    this.wasNear = isNear;
+    this.greetOnApproach(isNear, 0, ctx.nowMs, 3000);
 
     if (!this.spec.sitting) {
-      const target = (isNear || this.isTalking()) && p ? Math.atan2(p.dx, p.dz) : this.spec.rotY;
+      const target =
+        this.isTalking() && p ? Math.atan2(p.dx, p.dz) : this.spec.rotY;
       this.yaw = turnToward(this.yaw, target, 0.12);
     }
   }
 }
 
-export function createSocial(): { npcs: Npc[]; update: (ctx: StepContext) => void } {
+export function createSocial(): {
+  npcs: Npc[];
+  update: (ctx: StepContext) => void;
+} {
   const chatters = CHATTERS.map((c) => new Chatter(c));
   const maya = new Maya();
   const npcs: Npc[] = [...chatters, maya];
@@ -64,7 +77,6 @@ export function createSocial(): { npcs: Npc[]; update: (ctx: StepContext) => voi
 /** Maya: berjalan memutari kolam air mancur, berhenti saat ada pemain di dekatnya. */
 class Maya extends Npc {
   private angle = 0;
-  private wasNear = false;
   private static readonly LINES = 2;
 
   constructor() {
@@ -75,7 +87,7 @@ class Maya extends Npc {
 
   click(now: number): void {
     const next = this.talk < 0 ? 0 : (this.talk + 1) % Maya.LINES;
-    this.say(next, now, 4000);
+    this.say(next, now, 3000);
   }
 
   update(ctx: StepContext): void {
@@ -83,10 +95,9 @@ class Maya extends Npc {
     const pz = 32.5 + Math.sin(this.angle) * 3.5;
     const p = nearest(ctx.players, px, pz);
     const isNear = !!p && p.dist < 2.5;
-    if (isNear && !this.wasNear && !this.isTalking()) this.say(0, ctx.nowMs, 4000);
-    this.wasNear = isNear;
+    this.greetOnApproach(isNear, 0, ctx.nowMs, 3000);
 
-    if (isNear || this.isTalking()) {
+    if (this.isTalking()) {
       this.x = px;
       this.z = pz;
       this.y = Math.sin(ctx.nowSec * 2) * 0.005;

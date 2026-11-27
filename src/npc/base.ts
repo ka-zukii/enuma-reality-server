@@ -26,7 +26,11 @@ export interface NearInfo {
 }
 
 /** Pemain terdekat dari (x, z). Null jika tidak ada pemain di room. */
-export function nearest(players: PlayerPoint[], x: number, z: number): NearInfo | null {
+export function nearest(
+  players: PlayerPoint[],
+  x: number,
+  z: number,
+): NearInfo | null {
   let best: NearInfo | null = null;
   for (const p of players) {
     const dx = p.x - x;
@@ -51,12 +55,33 @@ export abstract class Npc {
    */
   talk = -1;
   private talkUntil = 0;
+  private wasNear = false;
+  private greetCooldownUntil = 0;
 
   constructor(readonly id: string) {}
 
   protected say(index: number, now: number, durationMs: number): void {
     this.talk = index;
     this.talkUntil = now + durationMs;
+  }
+
+  protected greetOnApproach(
+    isNear: boolean,
+    index: number,
+    now: number,
+    durationMs = 3000,
+    cooldownMs = 8000,
+  ): void {
+    if (
+      isNear &&
+      !this.wasNear &&
+      !this.isTalking() &&
+      now >= this.greetCooldownUntil
+    ) {
+      this.say(index, now, durationMs);
+      this.greetCooldownUntil = now + durationMs + cooldownMs;
+    }
+    this.wasNear = isNear;
   }
 
   protected isTalking(): boolean {

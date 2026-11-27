@@ -13,24 +13,38 @@ const CAT_SPECS: CatSpec[] = [
   {
     id: "cat-oyen",
     speed: 0.95,
-    waypoints: [[-34.0, 11.2], [-28.0, 11.2], [-28.5, 13.0], [-33.5, 12.8]],
+    waypoints: [
+      [-34.0, 11.2],
+      [-28.0, 11.2],
+      [-28.5, 13.0],
+      [-33.5, 12.8],
+    ],
   },
   {
     id: "cat-milo",
     speed: 0.9,
-    waypoints: [[-20.2, 28.8], [-11.8, 28.8], [-11.8, 36.2], [-20.2, 36.2]],
+    waypoints: [
+      [-20.2, 28.8],
+      [-11.8, 28.8],
+      [-11.8, 36.2],
+      [-20.2, 36.2],
+    ],
   },
   {
     id: "cat-snowy",
     speed: 0.9,
-    waypoints: [[25.0, 11.2], [33.2, 11.2], [33.2, 13.0], [25.0, 13.0]],
+    waypoints: [
+      [25.0, 11.2],
+      [33.2, 11.2],
+      [33.2, 13.0],
+      [25.0, 13.0],
+    ],
   },
 ];
 
 class CityCat extends Npc {
   private wpIdx = 1;
   private wait = 0;
-  private wasNear = false;
 
   constructor(
     id: string,
@@ -49,11 +63,10 @@ class CityCat extends Npc {
     const dt = Math.min(ctx.dt, 0.05);
     const p = nearest(ctx.players, this.x, this.z);
     const isNear = !!p && p.dist < 2.2;
-    if (isNear && !this.wasNear && !this.isTalking()) this.say(0, ctx.nowMs, 3000);
-    this.wasNear = isNear;
+    this.greetOnApproach(isNear, 0, ctx.nowMs, 3000);
 
     // Saat mengeong, kucing menghadap pemain dan diam
-    if (isNear || this.isTalking()) {
+    if (this.isTalking()) {
       if (p) this.yaw = turnToward(this.yaw, Math.atan2(p.dx, p.dz), 0.14);
       this.anim = 0;
       this.y = 0;
@@ -89,7 +102,10 @@ class CityCat extends Npc {
   }
 }
 
-export function createCats(): { cats: Npc[]; update: (ctx: StepContext) => void } {
+export function createCats(): {
+  cats: Npc[];
+  update: (ctx: StepContext) => void;
+} {
   const cats = CAT_SPECS.map((s) => new CityCat(s.id, s));
   return {
     cats,

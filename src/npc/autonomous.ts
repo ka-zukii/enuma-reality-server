@@ -7,7 +7,14 @@ import { Npc, nearest, type StepContext } from "./base.js";
 export type Step =
   | { kind: "sit"; x: number; z: number; rotY: number; duration: number }
   | { kind: "visit"; x: number; z: number; rotY: number; duration: number }
-  | { kind: "tram"; waitX: number; waitZ: number; rx: number; rz: number; duration: number };
+  | {
+      kind: "tram";
+      waitX: number;
+      waitZ: number;
+      rx: number;
+      rz: number;
+      duration: number;
+    };
 
 export interface AutonomousSpec {
   id: string;
@@ -22,7 +29,14 @@ export const AUTONOMOUS_SPECS: AutonomousSpec[] = [
     id: "rama",
     start: [-5.5, 45.8],
     schedule: [
-      { kind: "tram", waitX: -5.5, waitZ: 47.2, rx: -0.35, rz: -4.2, duration: 14 },
+      {
+        kind: "tram",
+        waitX: -5.5,
+        waitZ: 47.2,
+        rx: -0.35,
+        rz: -4.2,
+        duration: 14,
+      },
       { kind: "sit", x: -8, z: 13.4, rotY: T, duration: 7 },
       { kind: "sit", x: -20.0, z: 32.5, rotY: T / 2, duration: 8 },
       { kind: "visit", x: 27.5, z: 11.5, rotY: T, duration: 5 },
@@ -32,7 +46,14 @@ export const AUTONOMOUS_SPECS: AutonomousSpec[] = [
     id: "tara",
     start: [-2.5, 46.2],
     schedule: [
-      { kind: "tram", waitX: -2.5, waitZ: 47.2, rx: 0.35, rz: -2.0, duration: 14 },
+      {
+        kind: "tram",
+        waitX: -2.5,
+        waitZ: 47.2,
+        rx: 0.35,
+        rz: -2.0,
+        duration: 14,
+      },
       { kind: "sit", x: -16, z: 36.5, rotY: T, duration: 8 },
       { kind: "sit", x: 6, z: 13.4, rotY: T, duration: 7 },
       { kind: "visit", x: -12.65, z: 11.5, rotY: T, duration: 5 },
@@ -42,7 +63,14 @@ export const AUTONOMOUS_SPECS: AutonomousSpec[] = [
     id: "nando",
     start: [0.5, 45.5],
     schedule: [
-      { kind: "tram", waitX: 0.5, waitZ: 47.2, rx: -0.35, rz: 0.4, duration: 14 },
+      {
+        kind: "tram",
+        waitX: 0.5,
+        waitZ: 47.2,
+        rx: -0.35,
+        rz: 0.4,
+        duration: 14,
+      },
       { kind: "sit", x: 28, z: 13.4, rotY: T, duration: 7 },
       { kind: "visit", x: -30.85, z: 11.5, rotY: T, duration: 5 },
       { kind: "sit", x: -12.0, z: 32.5, rotY: -T / 2, duration: 7 },
@@ -52,7 +80,14 @@ export const AUTONOMOUS_SPECS: AutonomousSpec[] = [
     id: "salsa",
     start: [3.5, 46.0],
     schedule: [
-      { kind: "tram", waitX: 3.5, waitZ: 47.2, rx: 0.35, rz: 2.6, duration: 14 },
+      {
+        kind: "tram",
+        waitX: 3.5,
+        waitZ: 47.2,
+        rx: 0.35,
+        rz: 2.6,
+        duration: 14,
+      },
       { kind: "sit", x: -16, z: 28.5, rotY: 0, duration: 7 },
       { kind: "visit", x: 8.7, z: 11.5, rotY: T, duration: 5 },
     ],
@@ -61,7 +96,14 @@ export const AUTONOMOUS_SPECS: AutonomousSpec[] = [
     id: "yoga",
     start: [6.5, 45.8],
     schedule: [
-      { kind: "tram", waitX: 6.5, waitZ: 47.2, rx: -0.35, rz: -6.5, duration: 14 },
+      {
+        kind: "tram",
+        waitX: 6.5,
+        waitZ: 47.2,
+        rx: -0.35,
+        rz: -6.5,
+        duration: 14,
+      },
       { kind: "sit", x: 6, z: -22.9, rotY: 0, duration: 7 },
       { kind: "visit", x: 0, z: 32.5, rotY: -T / 2, duration: 5 },
     ],
@@ -75,7 +117,6 @@ export class AutonomousNpc extends Npc {
   private phase: Phase = "walk";
   private timer = 0;
   private rideTimer = 0;
-  private wasNear = false;
 
   constructor(private readonly spec: AutonomousSpec) {
     super(spec.id);
@@ -85,7 +126,7 @@ export class AutonomousNpc extends Npc {
   }
 
   click(now: number): void {
-    if (!this.isTalking()) this.say(this.stepIdx, now, 4000);
+    if (!this.isTalking()) this.say(this.stepIdx, now, 3000);
   }
 
   private get step(): Step {
@@ -97,8 +138,7 @@ export class AutonomousNpc extends Npc {
     const t = ctx.nowSec;
     const p = nearest(ctx.players, this.x, this.z);
     const isNear = !!p && p.dist < 2.5;
-    if (isNear && !this.wasNear && !this.isTalking()) this.say(this.stepIdx, ctx.nowMs, 4000);
-    this.wasNear = isNear;
+    this.greetOnApproach(isNear, this.stepIdx, ctx.nowMs, 3000);
 
     const step = this.step;
     const talking = this.isTalking();
@@ -143,10 +183,11 @@ export class AutonomousNpc extends Npc {
       this.timer -= dt;
       const isSit = step.kind === "sit";
       this.anim = isSit ? 2 : 0;
-      this.y = platformY(this.x, this.z) + (isSit ? 0 : Math.sin(t * 2) * 0.005);
+      this.y =
+        platformY(this.x, this.z) + (isSit ? 0 : Math.sin(t * 2) * 0.005);
       if (isSit) this.yaw = step.rotY;
       else this.yaw = isNear && p ? Math.atan2(p.dx, p.dz) : step.rotY;
-      if (this.timer <= 0 && !isNear) {
+      if (this.timer <= 0 && !talking) {
         this.phase = "walk";
         this.stepIdx = (this.stepIdx + 1) % this.spec.schedule.length;
       }
@@ -224,7 +265,10 @@ export class AutonomousNpc extends Npc {
   }
 }
 
-export function createAutonomous(): { npcs: Npc[]; update: (ctx: StepContext) => void } {
+export function createAutonomous(): {
+  npcs: Npc[];
+  update: (ctx: StepContext) => void;
+} {
   const npcs = AUTONOMOUS_SPECS.map((s) => new AutonomousNpc(s));
   return {
     npcs,
@@ -233,4 +277,3 @@ export function createAutonomous(): { npcs: Npc[]; update: (ctx: StepContext) =>
     },
   };
 }
-
